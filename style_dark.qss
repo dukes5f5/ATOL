@@ -1,0 +1,155 @@
+/* ========== GLOBAL ========== */
+QWidget {
+    background-color: #2b2b2b;
+    color: white;
+    font-family: 'Segoe UI';
+    font-size: 10pt;
+}
+
+/* ========== LINE EDITS ========== */
+QLineEdit {
+    background-color: #2b2b2b;
+    color: white;
+    border: 2px solid #01B4FE;
+    padding: 2px;
+    border-radius: 5px;
+}
+
+QLineEdit QAbstractItemView {
+    background-color: #2b2b2b;
+    color: white;
+    selection-background-color: #444;
+    selection-color: white;
+    border: 2px solid #01B4FE;
+    border-radius: 5px;
+}
+
+/* ========== BUTTONS ========== */
+QPushButton, QToolButton {
+    background-color: #01B4FE;
+    color: white;
+    border: 2px solid #01B4FE;
+    border-radius: 5px;
+    padding: 4px 10px;
+}
+
+QPushButton:hover, QToolButton:hover {
+    background-color: #33CCFF;
+    border: 2px solid #33CCFF;
+}
+
+QPushButton:pressed, QToolButton:pressed {
+    background-color: #0099CC;
+    border: 2px solid #0099CC;
+}
+
+/* ========== COMBO BOX ========== */
+QComboBox {
+    background-color: #2b2b2b;
+    color: white;
+    border: 2px solid #01B4FE;
+    border-radius: 5px;
+    padding: 2px 6px;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #2b2b2b;
+    color: white;
+    selection-background-color: #444;
+    selection-color: white;
+    border: 2px solid #01B4FE;
+    border-radius: 5px;
+}
+
+/* ========== CHECKBOXES ========== */
+QCheckBox {
+    spacing: 6px;
+    color: white;
+}
+
+QCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #01B4FE;
+    background-color: #2b2b2b;
+    border-radius: 4px;
+}
+
+QCheckBox::indicator:checked {
+    background-color: #01B4FE;
+}
+
+/* ========== RADIO BUTTONS ========== */
+QRadioButton {
+    spacing: 6px;
+    color: white;
+}
+
+QRadioButton::indicator {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #01B4FE;
+    background-color: #2b2b2b;
+    border-radius: 6px;
+}
+
+QRadioButton::indicator:checked {
+    background-color: #01B4FE;
+}
+
+/* ========== TABS ========== */
+QTabWidget::pane {
+    border: 2px solid #01B4FE;
+    padding: 4px;
+    border-radius: 5px;
+}
+
+QTabBar::tab {
+    background-color: #2b2b2b;
+    color: white;
+    border: 2px solid #01B4FE;
+    padding: 6px 12px;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+}
+
+QTabBar::tab:selected {
+    background-color: #333;
+    border-bottom-color: #2b2b2b;
+}
+
+QTabBar::tab:hover {
+    background-color: #444;
+}
+
+/* ========== SCROLLBARS ========== */
+QScrollBar:vertical, QScrollBar:horizontal {
+    background-color: #2b2b2b;
+    border: 2px solid #01B4FE;
+    width: 12px;
+    margin: 0px;
+    border-radius: 5px;
+}
+
+QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+    background-color: #01B4FE;
+    border-radius: 5px;
+}
+
+QScrollBar::add-line, QScrollBar::sub-line {
+    background-color: #2b2b2b;
+    border: none;
+}
+
+QScrollBar::add-page, QScrollBar::sub-page {
+    background: none;
+}
+
+/* ========== TOOLTIPS ========== */
+QToolTip {
+    background-color: #444;
+    color: white;
+    border: 2px solid #01B4FE;
+    padding: 4px;
+    border-radius: 5px;
+}
