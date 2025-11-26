@@ -79,8 +79,14 @@ def validate_input(le, text, rules):
             except ValueError:
                 valid = False
 
-    # Update border color based on validity
-    le.setStyleSheet("border: 2px solid green;" if valid else "border: 2px solid red;")
+    # Update border color and tooltip based on validity
+    # Using both color and tooltip for accessibility (colorblind users)
+    if valid:
+        le.setStyleSheet("border: 2px solid green;")
+        le.setToolTip("✓ Valid")
+    else:
+        le.setStyleSheet("border: 2px solid red;")
+        le.setToolTip("✗ Invalid")
 
 
 # Central dialog registry

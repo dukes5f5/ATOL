@@ -44,6 +44,20 @@ class DialogFactory:
                 if app:
                     app.setStyleSheet(qss)
 
+    def _resolve_ui_path(self, ui_file: str) -> str:
+        """
+        Resolve UI file path.
+        
+        Args:
+            ui_file: UI filename or absolute path.
+            
+        Returns:
+            Resolved path string.
+        """
+        if os.path.isabs(ui_file):
+            return ui_file
+        return self.loader.get_ui(ui_file)
+
     def create_dialog(self, key, parent=None, params=None):
         """
         Create a dialog instance from the registry.
@@ -60,7 +74,7 @@ class DialogFactory:
             raise KeyError(f"Dialog '{key}' not registered.")
 
         ui_file, result_func, init_func = REGISTRY[key]
-        ui_path = self.loader.get_ui(ui_file) if not os.path.isabs(ui_file) else ui_file
+        ui_path = self._resolve_ui_path(ui_file)
 
         class CallableDialog(QDialog):
             def __init__(self, parent=None, params=None):

@@ -27,6 +27,9 @@ class LicenseManager:
     TIMEOUT_DAYS = 7
 
     # SHA-256 hash of the private master key
+    # NOTE: In production, this should be loaded from an external configuration file
+    # or environment variable for better security. The current implementation is
+    # suitable for development/internal use.
     MASTER_KEY_HASH = "dd4846ec22c9f00d8462bb5cddd7a24d7c72b15d54b4224f5ffd47c1b6c6f4bd"
 
     def __init__(self):

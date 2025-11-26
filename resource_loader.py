@@ -5,15 +5,7 @@ Adapted for ATOL's directory structure while following DEFAULT_UIs patterns.
 """
 
 import sys
-import logging
 from pathlib import Path
-
-# Configure logging globally
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[logging.StreamHandler()]
-)
 
 
 class ResourceLoader:
@@ -27,11 +19,9 @@ class ResourceLoader:
         if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
             # PyInstaller bundle
             self.base_path = Path(sys._MEIPASS)
-            logging.debug("ResourceLoader: Frozen mode; base_path set to _MEIPASS")
         else:
             # Development mode - ATOL structure
             self.base_path = Path(__file__).resolve().parent
-            logging.debug("ResourceLoader: Dev mode; base_path set to script directory")
 
         # ATOL-specific directory structure
         # In dev mode, all files are at the same level as MAIN.py
@@ -44,18 +34,13 @@ class ResourceLoader:
         #   └── (other modules)
 
         self.resources_dir = self.base_path
-        logging.info(f"ResourceLoader: resources directory -> {self.resources_dir}")
 
     def get(self, *parts: str) -> str:
         """
         Resolve a resource path under the resources directory.
-        Logs a warning if the file does not exist.
+        Returns the path string whether or not it exists.
         """
         path = self.resources_dir.joinpath(*parts)
-        if not path.exists():
-            logging.warning(f"ResourceLoader: Resource not found -> {path}")
-        else:
-            logging.debug(f"ResourceLoader: Resource resolved -> {path}")
         return str(path)
 
     def get_ui(self, filename: str) -> str:

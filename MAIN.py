@@ -1145,11 +1145,9 @@ class MainWindow(QMainWindow):
 # -------------------------
 def main():
     """Main entry point for the ATOL application."""
-    # Validate license before starting the application
+    # Validate license at startup
     if not validate_license():
-        print("Application cannot start due to license issues.")
-        # Allow app to continue in demo mode rather than hard exit
-        # sys.exit(1)
+        print("License validation failed. Continuing in demo mode.")
     
     app = QApplication(sys.argv)
     mainWindow = MainWindow()
