@@ -1,26 +1,20 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sat Nov 15 13:31:43 2025
-
-@author: dukes
+Dialogs Registry - Central registry of dialogs for ATOL application.
+Maps dialog keys to (ui_file, result_func, init_func) tuples.
 """
 
-# ===============================
-# PyQt5 Dialog Factory Architecture
-# ===============================
-
-
-# --------------------------------
-# 1. dialogs_registry.py
-# --------------------------------
-# Central registry of dialogs: key -> (ui_file, result_func, init_func)
-
 import re
-from utils import resource_path
+from resource_loader import ResourceLoader
+
+# Initialize loader once
+loader = ResourceLoader()
+
 
 def collect_name(dialog):
     """Return the entered name from NameDialog."""
     return {"name": dialog.lineEditName.text()}
+
 
 def collect_settings(dialog):
     """Return settings values from SettingsDialog."""
@@ -29,17 +23,20 @@ def collect_settings(dialog):
         "autosave": dialog.checkBoxAutosave.isChecked()
     }
 
+
 def init_table(dialog, params):
     """Populate QTableWidget with column names from params."""
     columns = params.get("columns", [])
     dialog.tableWidget.setColumnCount(len(columns))
     dialog.tableWidget.setHorizontalHeaderLabels(columns)
 
+
 def init_combo(dialog, params):
     """Populate QComboBox with values from params."""
     values = params.get("values", [])
     dialog.comboBoxOptions.clear()
     dialog.comboBoxOptions.addItems(values)
+
 
 def init_validated_lineedits(dialog, params):
     """
@@ -57,6 +54,7 @@ def init_validated_lineedits(dialog, params):
         if le:
             le.setText("-")  # default value
             le.textChanged.connect(lambda text, le=le, rules=rules: validate_input(le, text, rules))
+
 
 def validate_input(le, text, rules):
     """
@@ -81,18 +79,50 @@ def validate_input(le, text, rules):
             except ValueError:
                 valid = False
 
-    # Update border color based on validity
+    # Update border color and tooltip based on validity
+    # Using both color and tooltip for accessibility (colorblind users)
     if valid:
         le.setStyleSheet("border: 2px solid green;")
+        le.setToolTip("✓ Valid")
     else:
         le.setStyleSheet("border: 2px solid red;")
+        le.setToolTip("✗ Invalid")
 
+
+# Central dialog registry
+# Format: key -> (ui_file, result_func, init_func)
+# ui_file can be a filename (resolved by DialogFactory using ResourceLoader)
+# or an absolute path
 REGISTRY = {
-    "name": (resource_path("GUI/NameDialog.ui"), collect_name, None),
-    "settings": (resource_path("GUI/SettingsDialog.ui"), collect_settings, None),
-    "table": (resource_path("GUI/TableDialog.ui"), lambda d: {}, init_table),
-    "combo": (resource_path("GUI/ComboDialog.ui"), lambda d: {"choice": d.comboBoxOptions.currentText()}, init_combo),
-    "validated": (resource_path("GUI/ValidatedDialog.ui"),
-                  lambda d: {"values": [d.lineEdit1.text(), d.lineEdit2.text(), d.lineEdit3.text()]},
-                  init_validated_lineedits),
+    "name": (
+        "NameDialog.ui",
+        collect_name,
+        None
+    ),
+    "settings": (
+        "SettingsDialog.ui",
+        collect_settings,
+        None
+    ),
+    "table": (
+        "TableDialog.ui",
+        lambda d: {},
+        init_table
+    ),
+    "combo": (
+        "ComboDialog.ui",
+        lambda d: {"choice": d.comboBoxOptions.currentText()},
+        init_combo
+    ),
+    "validated": (
+        "ValidatedDialog.ui",
+        lambda d: {
+            "values": [
+                d.lineEdit1.text(),
+                d.lineEdit2.text(),
+                d.lineEdit3.text()
+            ]
+        },
+        init_validated_lineedits
+    ),
 }

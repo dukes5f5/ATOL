@@ -1,26 +1,23 @@
 """
-ATOL v3 Main Application - refactored
+ATOL v3 Main Application - Modular Architecture
 
-Major improvements:
-- Dynamic, robust path handling (no fragile "../../" usage)
+Major features:
+- Modular architecture based on DEFAULT_UIs patterns
+- ResourceLoader for unified resource path handling
+- DialogFactory for dialog creation and management
+- LicenseManager for license validation at startup
+- StdoutConsole for stdout/stderr redirection to GUI
+- Dynamic, robust path handling with ATOL directory structure constants
 - Safer I/O with explicit error handling and user messages (QMessageBox)
-- Fixed stdout redirection to GUI output with safe fallback
-- Avoided dangerous pandas/.apply misuse; model updates validated
-- Guarded file lookups and empty-data cases
-- Removed unreachable code and reduced duplicate CSV reads
-- Safer model access (checks for None) and validation of ICAO
-- Cleaner mapping between displayed column names and dataframe columns
 - All heavy I/O/processing calls are wrapped in try/except for better UX
 
 Usage:
-- Assuming this file lives at CODE/PYTHON/MAIN.py as in the restructure layout,
-  run from that directory (or from repo root: cd CODE/PYTHON && python MAIN.py).
+- Run from the ATOL directory: python MAIN.py
 """
 
 import sys
 import os
 import math
-import io
 from pathlib import Path
 
 import pandas as pd
@@ -39,29 +36,35 @@ from PyQt5.QtGui import (
     QBrush,
     QColor,
     QFont,
-    QTextCursor,
 )
 from PyQt5.QtCore import Qt
 
-# Local imports (assumes CODE/PYTHON is the working module location)
+# Local imports - ATOL modules
 from accdb_reader import read_accdb_tables
 from simple_distance import distance
 from runwaykml import makerunway_kml
 from runwayxml import makerunway_xml
 
+# Modular imports from DEFAULT_UIs architecture
+from resource_loader import ResourceLoader
+from dialog_factory import DialogFactory
+from license_manager import LicenseManager
+from stdout_console import StdoutConsole
+
 
 # -------------------------
 # Dynamic path resolution
 # -------------------------
+# ATOL directory structure constants
 # File layout assumption:
 # repo/
 #   CODE/
 #     PYTHON/   <-- this MAIN.py lives here
 #       MAIN.py
-#       GUI/MAIN.ui
+#       MAIN.ui (or GUI/MAIN.ui)
 #   DATA/
 #     AFFIF/
-#   CUSTOM/    <-- user CSV input at repo root (named CUSTOM)
+#   CUSTOM/    <-- user CSV input at repo root
 #   RETURNS/   <-- outputs at repo root
 
 HERE = Path(__file__).resolve()
@@ -79,6 +82,9 @@ QSS_DIR = GUI_DIR / "QSS"
 WMM_DIR = PYTHON_DIR / "WMM2025COF"
 
 
+# -------------------------
+# Utility functions
+# -------------------------
 def get_accdb_file():
     """Return first .accdb in DATA/AFFIF, raise informative error if missing."""
     if not AFFIF_DIR.exists():
@@ -110,28 +116,26 @@ def is_valid_icao(icao: str) -> bool:
 
 
 # -------------------------
-# Safe stdout -> UI stream
+# License validation
 # -------------------------
-class EmittingStream(io.StringIO):
-    def __init__(self, text_edit):
-        super().__init__()
-        self.text_edit = text_edit
-
-    def write(self, text):
-        # Use QTextCursor to move to the end; fallback to original stdout on failure
-        try:
-            self.text_edit.moveCursor(QTextCursor.End)
-            self.text_edit.insertPlainText(text)
-            QApplication.processEvents()
-        except Exception:
-            # Fallback to real stdout to avoid losing messages
-            sys.__stdout__.write(text)
-
-    def flush(self):
-        try:
-            sys.__stdout__.flush()
-        except Exception:
-            pass
+def validate_license():
+    """
+    Validate the application license at startup.
+    Returns True if license is valid, False otherwise.
+    """
+    try:
+        license_mgr = LicenseManager()
+        if not license_mgr.check():
+            print("❌ License expired, deleted, or invalid for this machine/key.")
+            return False
+        return True
+    except FileNotFoundError as e:
+        # userkey.txt is missing - allow app to run in unlicensed mode
+        print(f"⚠️ License file not found: {e}. Running in demo mode.")
+        return True
+    except Exception as e:
+        print(f"⚠️ License check failed: {e}. Running in demo mode.")
+        return True
 
 
 # -------------------------
@@ -140,34 +144,61 @@ class EmittingStream(io.StringIO):
 class MainWindow(QMainWindow):
     """
     Main application window for the ATOL v3 interface.
+    Uses modular architecture with ResourceLoader, DialogFactory, and StdoutConsole.
     """
+
+    # Column mapping between display names and dataframe columns
+    DISPLAY_COLUMN_MAPPING = {"ICAO": "icao", "WAC#": "wac_innr", "NAME": "arpt_name"}
 
     def __init__(self):
         super().__init__()
+        
+        # Initialize ResourceLoader and DialogFactory
+        self.loader = ResourceLoader()
+        
         try:
             self.initialize_ui()
         except Exception as e:
             # If UI cannot be loaded we must abort
             QMessageBox.critical(None, "Startup Error", f"Failed to initialize UI: {e}")
             raise
+        
         self.setup_initial_values()
         self.connect_signals()
 
     def initialize_ui(self):
-        """Load the UI file and prepare widgets."""
-        ui_path = GUI_DIR / "MAIN.ui"
-        if not ui_path.is_file():
-            raise FileNotFoundError(f"UI file not found: {ui_path}")
-        loadUi(str(ui_path), self)
+        """Load the UI file, apply styles, and prepare widgets."""
+        # Try MAIN.ui in current directory first, then fall back to GUI_DIR
+        ui_path = self.loader.get_ui("MAIN.ui")
+        if not Path(ui_path).is_file():
+            ui_path = GUI_DIR / "MAIN.ui"
+            if not ui_path.is_file():
+                raise FileNotFoundError(f"UI file not found: {ui_path}")
+            ui_path = str(ui_path)
+        
+        loadUi(ui_path, self)
 
-        # Redirect stdout to the CMD window widget if available
+        # Initialize DialogFactory with stylesheet
+        style_path = self.loader.get_style("style_dark.qss")
+        self.factory = DialogFactory(style_path=style_path)
+
+        # Redirect stdout/stderr to the CMD window widget using StdoutConsole
+        self.console = None
         try:
-            sys.stdout = EmittingStream(self.CMDwindow)
+            if hasattr(self, "CMDwindow") and self.CMDwindow:
+                self.console = StdoutConsole(self.CMDwindow)
         except Exception:
             # If CMDwindow not present or redirect fails, keep default stdout
             pass
 
         # Initial UI state
+        self._setup_initial_ui_state()
+
+        # Initialize combo boxes
+        self.setup_combo_boxes()
+
+    def _setup_initial_ui_state(self):
+        """Configure initial visibility and text of UI elements."""
         try:
             self.AFFIF_DATA_ICON_label.hide()
             self.AFFIF_DATA_labelEdit.setText("")
@@ -181,9 +212,6 @@ class MainWindow(QMainWindow):
             # Some UI elements may be named differently in variants of the UI;
             # ignore missing widgets to allow partial compatibility.
             pass
-
-        # Initialize combo boxes
-        self.setup_combo_boxes()
 
     def setup_combo_boxes(self):
         """Populate initial combo box options and defaults."""
@@ -373,7 +401,6 @@ class MainWindow(QMainWindow):
     # -------------------------
     # Table/search UI helpers
     # -------------------------
-    DISPLAY_COLUMN_MAPPING = {"ICAO": "icao", "WAC#": "wac_innr", "NAME": "arpt_name"}
 
     def search_table(self, text=""):
         """
@@ -1079,10 +1106,49 @@ class MainWindow(QMainWindow):
 
         print("Complete")
 
+    def closeEvent(self, event):
+        """Handle window close event - restore original streams."""
+        if self.console:
+            self.console.restore()
+        super().closeEvent(event)
+
+    # -------------------------
+    # Dialog launching methods using DialogFactory
+    # -------------------------
+    def open_dialog(self, key, params=None):
+        """
+        Open a dialog using the DialogFactory.
+        
+        Args:
+            key: Registry key for the dialog.
+            params: Optional parameters for the dialog.
+            
+        Returns:
+            Dialog result or None if canceled.
+        """
+        try:
+            dialog = self.factory.create_dialog(key, parent=self, params=params)
+            result = dialog()
+            if result and hasattr(self, "CMDwindow"):
+                self.CMDwindow.appendPlainText(str(result))
+            return result
+        except KeyError as e:
+            print(f"Dialog '{key}' not found: {e}")
+            return None
+        except Exception as e:
+            print(f"Error opening dialog: {e}")
+            return None
+
+
 # -------------------------
 # Application entrypoint
 # -------------------------
 def main():
+    """Main entry point for the ATOL application."""
+    # Validate license at startup
+    if not validate_license():
+        print("License validation failed. Continuing in demo mode.")
+    
     app = QApplication(sys.argv)
     mainWindow = MainWindow()
     mainWindow.show()
